@@ -1,0 +1,21 @@
+{
+    "manifest_version": 3,
+    "name": "Hello World",
+    "description": "Writing Hello World",
+    "version": "0.1",
+
+    "permissions": [
+        "contextMenus",
+        "tabs",
+        "devtools_page"],
+
+    "action": {
+    "default_popup": "hello.html",
+    "default_icon": {
+      "16": "icon.png",
+      "24": "icon.png",
+      "32": "icon.png"}
+  }
+
+
+}
