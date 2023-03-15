@@ -59,6 +59,7 @@ function saveCarbonData(data) {
       console.log(`Data saved to file ${filename}`);
     }
   });
+  return filename;
 }
 
 async function fetchCarbonData() {
@@ -69,4 +70,12 @@ async function fetchCarbonData() {
   return data;
 }
 
-getCarbonData(zone);
+function getCurrentCarbonIntensity(countryCode) {
+  const data = JSON.parse(getCarbonData(countryCode));
+  const now = new Date();
+  const currentData = data.forecast.find(d => new Date(d.datetime) <= now);
+  return currentData.carbonIntensity;
+}
+
+//Print the current estimated carbon intensity [gCO2eq/kWh]
+console.log(getCurrentCarbonIntensity(zone));
