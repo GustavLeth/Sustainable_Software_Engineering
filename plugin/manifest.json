@@ -9,10 +9,6 @@
       "tabs",
       "nativeMessaging"
     ],
-    "background": {
-      "service_worker": 
-        "src/index.js"
-    },
     "host_permissions": [
       "*://*.google.com/"
     ],

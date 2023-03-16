@@ -118,20 +118,14 @@ const extractHostname = (url) => {
   });
 handleMessage({action: "start"});
 
-const getCurrentCarbonIntensity = () => {
-  const response = fetch("localhost:3000")
-  .then(response => {
-     return response.data;
-  })
-  .catch(error => {
-    console.error("error", error);
-      // handle the error
-  });
-  return response;
+const getCurrentCarbonIntensity = async() => {
+  const response = await fetch("http://localhost:3000");
+  const intensity = await response.json();
+  console.log('intensity', intensity)
+  const carbonIntensityElement = document.getElementById("carbon_intensity");
+  carbonIntensityElement.textContent = intensity;
 }
-
-const intensity = getCurrentCarbonIntensity();
-
+getCurrentCarbonIntensity();
 //   chrome.runtime.onMessage.addListener(handleMessage);
 // chrome.runtime.sendMessage({ action: 'start' });
 

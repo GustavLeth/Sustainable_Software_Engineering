@@ -1,9 +1,25 @@
 const express = require('express');
 const fs = require('fs');
 const moment = require('moment');
+var cors = require('cors');
 const app = express()
 const port = 3000
 const DT_FMT = 'YYMMDDHH'
+
+const corsOpts = {
+  origin: '*',
+
+  methods: [
+    'GET',
+    'POST',
+  ],
+
+  allowedHeaders: [
+    'Content-Type',
+  ],
+};
+
+app.use(cors(corsOpts));
 
 function getCarbonData(countryCode) {
   const cutoffTime = moment().subtract(47, 'hours'); // 47 hours ago from current time, should be safe since the forecast is for 48 hours.
