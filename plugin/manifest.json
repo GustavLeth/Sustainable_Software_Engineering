@@ -11,7 +11,7 @@
     ],
     "background": {
       "service_worker": 
-        "script.js"
+        "src/index.js"
     },
     "host_permissions": [
       "*://*.google.com/"
