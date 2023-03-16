@@ -1,6 +1,6 @@
 body {
   font-family: Arial, sans-serif;
-  background-color: #f2f2f2;
+  background-color: #ccffcc;
 }
 
 .container {
@@ -10,6 +10,7 @@ body {
   background-color: #fff;
   border-radius: 5px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  text-align: center;
 }
 
 h1 {
@@ -18,7 +19,7 @@ h1 {
 }
 
 button {
-  background-color: #4CAF50;
+  background-color: #44bb44;
   color: white;
   border: none;
   border-radius: 5px;
