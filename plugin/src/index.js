@@ -1,8 +1,8 @@
-
 const localStorage = chrome.storage.local;
 let counter = 0;
 let stats = {}
 let duration = 0
+
 const extractHostname = (url) => {
     let hostname = url.indexOf("//") > -1 ? url.split('/')[2] : url.split('/')[0];
   
@@ -15,19 +15,22 @@ const extractHostname = (url) => {
   };
   
   const setByteLengthPerOrigin = async(origin, byteLength) => {
-    // const stats = await localStorage.get(['stats']).key;
-    // let stats = {}
-    // chrome.storage.local.get(["stats"]).then((result) => {
-    //   console.log("Value currently is " + result.key);
-    //   stats = result.key && JSON.parse(result.key)
-    // });
     // check if it has key, else we would parse the number to "NAN" and we don't want that.
     counter += byteLength;
+    console.log('counter', counter);
     const bytePerOrigin = origin in stats ? parseInt(stats[origin]) : 0;
     stats[origin] = bytePerOrigin + byteLength;
-    chrome.storage.local.set({ "stats": "hey" }).then(() => {
-      console.log("Value is set to " + JSON.stringify(stats));
-    });
+  };
+
+  const writeToStorageCycle = () => {
+    setTimeout(() => {
+      chrome.storage.sync.set({ "stats": JSON.stringify(stats) }).then(() => {
+        console.log("website stats: " + JSON.stringify(stats));
+      });
+      writeToStorageCycle();
+      const bytesUsed = document.getElementById("bytes");
+      bytesUsed.textContent = counter / 1024;
+      }, 3000);
   };
   
   const isChrome = () => {
@@ -41,6 +44,7 @@ const extractHostname = (url) => {
        const contentLength = undefined === responseHeadersContentLength ? {value: 0}
         : responseHeadersContentLength;
        const requestSize = parseInt(contentLength.value, 10);
+       console.log('origin', origin);
        setByteLengthPerOrigin(origin, requestSize);
   
        return {};
@@ -66,16 +70,8 @@ const extractHostname = (url) => {
     //chrome.browserAction.setIcon({path: `icons/icon-${type}-48.png`});
   };
   
-  const addOneMinute = async() => {
-    duration++;
-    //localStorage.set({duration: duration});
-  };
   
-  let addOneMinuteInterval;
-  
-  const handleMessage = (request) => {
-    request = {action: "start"};
-    if ('start' === request.action) {
+  const start = () => {
     console.log("start");
       setBrowserIcon('on');
   
@@ -84,49 +80,34 @@ const extractHostname = (url) => {
         {urls: ['<all_urls>']},
         ['responseHeaders']
       );
-  
-      if (!addOneMinuteInterval) {
-        addOneMinuteInterval = setInterval(addOneMinute, 60000);
-      }
-  
-      return;
-    }
-  
-    if ('stop' === request.action) {
-      setBrowserIcon('off');
-      chrome.webRequest.onHeadersReceived.removeListener(headersReceivedListener);
-  
-      if (addOneMinuteInterval) {
-        clearInterval(addOneMinuteInterval);
-        addOneMinuteInterval = null;
-      }
-    }
   };
 
-  const onDisconnect = () => {
-    const stringifiedData = JSON.stringify(stats);
-    console.log("disconnected")
-    chrome.storage.local.set({ "stats": stringifiedData }).then(() => {
-      console.log("Value is set to " + stringifiedData);
-    });
-  }
-
   chrome.runtime.onConnect.addListener(function(port) {
+    console.log("on connect");
         port.onDisconnect.addListener(function() {
            onDisconnect();
         });
   });
-handleMessage({action: "start"});
+  chrome.storage.sync.get(["stats"]).then((result) => {
+    stats = JSON.parse(result["stats"]);
+    counter = Object.keys(stats).reduce((acc, currentKey) => acc + stats[currentKey], 0);
+    console.log('counter', counter)
+    start();
+    writeToStorageCycle();
+  });
 
 const getCurrentCarbonIntensity = async() => {
+  try {
   const response = await fetch("http://localhost:3000");
   const intensity = await response.json();
   console.log('intensity', intensity)
   const carbonIntensityElement = document.getElementById("carbon_intensity");
   carbonIntensityElement.textContent = intensity;
+  } catch(error) {
+    console.log("couldn't fetch from backend");
+    return 0;
+  }
 }
 getCurrentCarbonIntensity();
-//   chrome.runtime.onMessage.addListener(handleMessage);
-// chrome.runtime.sendMessage({ action: 'start' });
 
   
