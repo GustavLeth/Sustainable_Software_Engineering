@@ -27,9 +27,9 @@ const extractHostname = (url) => {
       chrome.storage.sync.set({ "stats": JSON.stringify(stats) }).then(() => {
         console.log("website stats: " + JSON.stringify(stats));
       });
+        const bytesUsed = document.getElementById("bytes");
+        bytesUsed.textContent = counter / 1024;
       writeToStorageCycle();
-      const bytesUsed = document.getElementById("bytes");
-      bytesUsed.textContent = counter / 1024;
       }, 3000);
   };
   
@@ -88,26 +88,29 @@ const extractHostname = (url) => {
            onDisconnect();
         });
   });
+
+  const getCurrentCarbonIntensity = async() => {
+    try {
+    const response = await fetch("http://localhost:3000");
+    const intensity = await response.json();
+    console.log('intensity', intensity)
+    const carbonIntensityElement = document.getElementById("carbon_intensity");
+    carbonIntensityElement.textContent = intensity;
+    } catch(error) {
+      console.log("couldn't fetch from backend");
+      return 0;
+    }
+  }
+
   chrome.storage.sync.get(["stats"]).then((result) => {
-    stats = JSON.parse(result["stats"]);
+    stats = JSON.parse(result["stats"]) ?? {};
     counter = Object.keys(stats).reduce((acc, currentKey) => acc + stats[currentKey], 0);
-    console.log('counter', counter)
+    console.log('counter', counter);
+    getCurrentCarbonIntensity();
     start();
     writeToStorageCycle();
   });
 
-const getCurrentCarbonIntensity = async() => {
-  try {
-  const response = await fetch("http://localhost:3000");
-  const intensity = await response.json();
-  console.log('intensity', intensity)
-  const carbonIntensityElement = document.getElementById("carbon_intensity");
-  carbonIntensityElement.textContent = intensity;
-  } catch(error) {
-    console.log("couldn't fetch from backend");
-    return 0;
-  }
-}
-getCurrentCarbonIntensity();
+
 
   
