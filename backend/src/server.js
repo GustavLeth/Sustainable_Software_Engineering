@@ -1,6 +1,10 @@
 const express = require('express');
 const fs = require('fs');
 const moment = require('moment');
+const { promisify } = require("util");
+const readFileAsync = promisify(fs.readFile);
+const writeFileAsync = promisify(fs.writeFile);
+
 var cors = require('cors');
 const app = express()
 const port = 3000
@@ -47,12 +51,11 @@ function getCarbonData(countryCode) {
     const latestFile = recentFiles[0];
     const filePath = `./carbon_data/${latestFile}`;
     const carbonData = fs.readFileSync(filePath, 'utf8');
-    return carbonData;
+    return Promise.resolve(carbonData);
   } else {
-    fetchCarbonData()
+    return fetchCarbonData(countryCode)
       .then(carbonData => {
-        saveCarbonData(carbonData);
-        return carbonData;
+        return saveCarbonData(carbonData);
       });
   }
 }
@@ -69,37 +72,80 @@ function saveCarbonData(data) {
       console.log(`Data saved to file ${filename}`);
     }
   });
-  return filename;
+  return data;
 }
 
-async function fetchCarbonData() {
+async function fetchCarbonData(countryCode) {
   const {default: fetch} = await import('node-fetch');
   //API Key and Country Code are hard-coded here for the moment!
-    const zone = 'NL'
-    const options = {
-    method: 'GET',
-    headers: {
-        'X-BLOBR-KEY': '0fxlgCW4i8k9pXutI6UpvHsLFCv9VPc4',
+  const options = {
+  method: 'GET',
+  headers: {
+      'X-BLOBR-KEY': '0fxlgCW4i8k9pXutI6UpvHsLFCv9VPc4',
     },
-    };
-  const url = `https://api-access.electricitymaps.com/2w97h07rvxvuaa1g/carbon-intensity/forecast?zone=${zone}`;
+  };
+  const url = `https://api-access.electricitymaps.com/2w97h07rvxvuaa1g/carbon-intensity/forecast?zone=${countryCode}`;
   const response = await fetch(url, options);
   const data = await response.json();
   return data;
 }
 
+
 function getCurrentCarbonIntensity(countryCode) {
-  const data = JSON.parse(getCarbonData(countryCode));
-  const now = new Date();
-  const currentData = data.forecast.find(d => new Date(d.datetime) <= now);
-  return currentData.carbonIntensity;
+  return getCarbonData(countryCode)
+    .then(rawData => {
+      const data = JSON.parse(rawData);
+      const now = new Date();
+      const currentData = data.forecast.find(d => new Date(d.datetime) <= now);
+      return currentData.carbonIntensity;
+    })
+    .catch(error => {
+      console.error(error);
+      return null;
+    });
 }
 
+async function fetchCountryCodeFromIp(ip) {
+  const {default: fetch} = await import('node-fetch');
+  const url = `https://ipinfo.io/${ip}?token=dada096b45743a`
+  const response = await fetch(url);
+  const data = await response.json();
+  return data.country;
+}
 
-app.get('/', async(req, res) => {
-  const intensity = await getCurrentCarbonIntensity("NL");
-  console.log('intensity', intensity)
-  res.send(intensity.toString());    
+async function getCountryCodeFromIp(ip) {
+  const filePath = "./ip_data/ip_country_code.csv";
+  const fileData = await readFileAsync(filePath, "utf8");
+  const lines = fileData.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const [fileIp, countryCode] = lines[i].split(",");
+    if (fileIp === ip) {
+      console.log("Found ip in db, no api call.")
+      return countryCode.trim();
+    }
+  }
+
+  const countryCode = await fetchCountryCodeFromIp(ip);
+  await writeFileAsync(filePath, `${ip},${countryCode}\n`, { flag: "a" });
+
+  return countryCode;
+}
+
+app.get('/', (req, res) => {
+  const ip_address = res.req.originalUrl.slice(2);
+  getCountryCodeFromIp(ip_address)
+    .then(countryCode => {
+      console.log("ip", ip_address, "is in", countryCode);
+      return getCurrentCarbonIntensity(countryCode);
+    })
+    .then(intensity => {
+      console.log('intensity', intensity);
+      res.send(intensity.toString());
+    })
+    .catch(error => {
+      console.error(error);
+      res.send('Error occurred!');
+    });
 });
 
 app.listen(port, () => {
