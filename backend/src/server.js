@@ -51,7 +51,7 @@ function getCarbonData(countryCode) {
     const latestFile = recentFiles[0];
     const filePath = `./carbon_data/${latestFile}`;
     const carbonData = fs.readFileSync(filePath, 'utf8');
-    return Promise.resolve(carbonData);
+    return Promise.resolve(JSON.parse(carbonData));
   } else {
     return fetchCarbonData(countryCode)
       .then(carbonData => {
@@ -93,8 +93,7 @@ async function fetchCarbonData(countryCode) {
 
 function getCurrentCarbonIntensity(countryCode) {
   return getCarbonData(countryCode)
-    .then(rawData => {
-      const data = JSON.parse(rawData);
+    .then(data => {
       const now = new Date();
       const currentData = data.forecast.find(d => new Date(d.datetime) <= now);
       return currentData.carbonIntensity;
@@ -135,7 +134,7 @@ app.get('/', (req, res) => {
   const ip_address = res.req.originalUrl.slice(2);
   getCountryCodeFromIp(ip_address)
     .then(countryCode => {
-      console.log("ip", ip_address, "is in", countryCode);
+      console.log("Given ip", ip_address, "is in", countryCode);
       return getCurrentCarbonIntensity(countryCode);
     })
     .then(intensity => {
