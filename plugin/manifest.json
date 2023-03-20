@@ -10,8 +10,7 @@
       "nativeMessaging"
     ],
     "background": {
-      "service_worker": 
-          "src/index.js"
+      "service_worker": "src/index.js"
     },
     "host_permissions": [
       "*://*.google.com/"
