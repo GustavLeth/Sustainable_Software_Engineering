@@ -123,6 +123,19 @@ const extractHostname = (url) => {
       return 0;
     }
   }
+  
+ const beerEquivalent = async() => {
+    try {
+    const beerElement = document.getElementById("beer_equivalent");
+	const carbonElement = document.getElementById("carbon_equivalent");
+	const carbonEquivalent = 555;
+    carbonElement.textContent = carbonEquivalent;
+    beerElement.textContent = carbonEquivalent/250.0; //https://www.co2everything.com/co2e-of/beer
+    } catch(error) {
+      console.log("couldn't fetch from backend");
+      return 0;
+    }
+  }
 
   const setLocalCarbonIntensity = (intensity) => {
     const carbonIntensityElement = document.getElementById("carbon_intensity");
