@@ -3,6 +3,10 @@ let totalBytes = 0;
 let stats = {}
 let duration = 0
 let resetButton;
+
+// keys: ip and size.
+const requestMap = new Map();
+
 const resetByteTracker = () => {
   console.log("reset");
   stats = {}
@@ -56,8 +60,11 @@ const extractHostname = (url) => {
     if (isChrome()) {
        const origin = extractHostname(!requestDetails.initiator ? requestDetails.url : requestDetails.initiator);
        const responseHeadersContentLength = requestDetails.responseHeaders.find(element => element.name.toLowerCase() === "content-length");
-       const contentLength = undefined === responseHeadersContentLength ? {value: 0}
-        : responseHeadersContentLength;
+       const contentLength = responseHeadersContentLength ? responseHeadersContentLength : {value: 0};
+        if (contentLength.value > 0) {
+          const request = {size: contentLength.value};
+          requestMap.set(requestDetails.requestId, request);
+        }
        const requestSize = parseInt(contentLength.value, 10);
        setByteLengthPerOrigin(origin, requestSize);
   
@@ -69,7 +76,6 @@ const extractHostname = (url) => {
     filter.ondata = event => {
       const origin = extractHostname(!requestDetails.originUrl ? requestDetails.url : requestDetails.originUrl);
       setByteLengthPerOrigin(origin, event.data.byteLength);
-      console.log('event', event)
       filter.write(event.data);
     };
   
@@ -85,7 +91,7 @@ const extractHostname = (url) => {
   };
 
   const extractIPAddress = req => {
-
+    console.log("req", req);
   }
  
   const start = () => {
@@ -97,17 +103,24 @@ const extractHostname = (url) => {
       );
   };
 
-  chrome.webRequest.onCompleted.addListener(
-    extractIPAddress,
-    {},
-    [],
+  chrome.webRequest.onResponseStarted.addListener(
+    ({ip, ...req}) => {
+      const request = requestMap.get(req.requestId);
+      if (request) {
+        // get carbon intensity for iåp.
+        request.ip = ip;
+        requestMap.set(req.requestId, request);
+      }
+      console.log(`Network request with ${ip}`);
+      console.table("request", req.requestId);
+    },
+    {urls: ['*://*/*']}
   );
 
   const getCurrentCarbonIntensity = async() => {
     try {
     const response = await fetch("http://localhost:3000");
     const intensity = await response.json();
-    console.log('intensity', intensity)
     const carbonIntensityElement = document.getElementById("carbon_intensity");
     carbonIntensityElement.textContent = intensity;
     } catch(error) {
