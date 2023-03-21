@@ -107,7 +107,7 @@ const extractHostname = (url) => {
     ({ip, ...req}) => {
       const request = requestMap.get(req.requestId);
       if (request) {
-        // get carbon intensity for iåp.
+        // get carbon intensity for ip.
         request.ip = ip;
         requestMap.set(req.requestId, request);
       }
@@ -128,11 +128,25 @@ const extractHostname = (url) => {
       return 0;
     }
   }
+  
+ const beerEquivalent = async() => {
+    try {
+    const beerElement = document.getElementById("beer_equivalent");
+	const carbonElement = document.getElementById("carbon_equivalent");
+	const carbonEquivalent = 555;
+    carbonElement.textContent = carbonEquivalent;
+    beerElement.textContent = carbonEquivalent/250.0; //https://www.co2everything.com/co2e-of/beer
+    } catch(error) {
+      console.log("couldn't fetch from backend");
+      return 0;
+    }
+  }
 
 
 let timer;
   chrome.storage.sync.get(["stats"]).then((result) => {
     getCurrentCarbonIntensity();
+    beerEquivalent();
     stats = JSON.parse(result["stats"]) ?? {};
     totalBytes = Object.keys(stats).reduce((acc, currentKey) => acc + stats[currentKey], 0);
     start();
