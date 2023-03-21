@@ -8,6 +8,9 @@
     "build": "webpack",
     "watch": "webpack --watch"
   },
+  "background": {
+    "service_worker": "src/index.js"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",

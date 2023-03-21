@@ -1,21 +1,18 @@
-let totalBytes = 0;
-let carbonUsed = 0;
-let stats = {}
-let duration = 0
+let localIntensity = 0;
+let requestMap = new Map();
 let resetButton;
 let readMoreButton;
+const downloadConstant = 1;
+const uploadConstant = 2;
+const storageKey = "energy_usage_map";
 
 // keys: ip and size.
-let requestMap = new Map();
-const localIntensity = 0;
-
 const resetByteTracker = () => {
   console.log("reset");
-  stats = {}
   totalBytes = 0;
   
-  chrome.storage.sync.set({ "stats": JSON.stringify({}) }).then(() => {
-    console.log("Set stats: " + JSON.stringify({}));
+  chrome.storage.sync.set({ storageKey: JSON.stringify(new Map()) }).then(() => {
+    console.log(`Set ${storageKey}: ` + JSON.stringify(new Map()));
   });
 };
 
@@ -30,21 +27,48 @@ const extractHostname = (url) => {
     return hostname;
   };
 
+  const calculateCo2Usage = () => {
+    if (requestMap.size < 1) {
+      return 0;
+    }
+    const mapIterator = requestMap.values();
+    let Co2Consumed = 0;
+    while(true) {
+      const next = mapIterator.next().value;
+      if (!next) {
+        break;
+      }
+      Co2Consumed += (next.intensity * next.size * uploadConstant) + (next.size * localIntensity * downloadConstant)
+    }
+    // const arrayFromMap = [...requestMap].map(request => {return {intensity: request.value.intensity ?? 0, size: request.value.size ?? 0}});
+    // const Co2Consumed = arrayFromMap.reduce((acc, req) => {
+    //   return acc + (req.intensity * req.size * uploadConstant) + (req.size * localIntensity * downloadConstant);
+    // }, 0);
+    return Co2Consumed
+  }
+
   const writeToStorage = () => {
-      chrome.storage.sync.set({ "stats": JSON.stringify([...requestMap]) }).then(() => {
-        console.log("Set stats: " + JSON.stringify([...requestMap]));
-      });
-        try {
-          const bytesElement = document.getElementById("bytes_used");
-        bytesElement.textContent = totalBytes / 1024;
+      chrome.storage.sync.set({ storageKey: JSON.stringify([...requestMap]) });
+      try {
+        //   const bytesElement = document.getElementById("bytes_used");
+        // bytesElement.textContent = totalBytes / 1024;
+        const Co2Consumed = calculateCo2Usage();
+        const carbonUsedElement = document.getElementById("carbon_equivalent");
+        if (carbonUsedElement) {
+          setBeerEquivalent(Co2Consumed);
+          carbonUsedElement.textContent = Co2Consumed;
+        }
+        // TODO move these somewhere else, not sure how i hook into the lifecycle of the app at the right spot.
         if (!resetButton) {
           resetButton = document.getElementById("reset_button")
           resetButton.onclick = () => resetByteTracker();
         }
-        readMoreButton = document.getElementById("read_more_button")
-        readMoreButton.onclick = () => chrome.tabs.create({ url: chrome.runtime.getURL('readmore.html') });
-        } catch (error) {
-        console.log("document not defined");
+        if (!readMoreButton) {
+          readMoreButton = document.getElementById("read_more_button")
+          readMoreButton.onclick = () => chrome.tabs.create({ url: chrome.runtime.getURL('readmore.html') });
+        }
+      } catch (error) {
+        console.error("document not defined", error);
       }
   };
   
@@ -62,7 +86,7 @@ const extractHostname = (url) => {
           const request = {size: requestSize, origin: origin};
           requestMap.set(origin, request);
         }
-       return {};
+        return;
     }
     // not sure if we need this.
     let filter = browser.webRequest.filterResponseData(requestDetails.requestId);
@@ -83,7 +107,6 @@ const extractHostname = (url) => {
   };
 
 
- 
   const start = () => {
       setBrowserIcon('on');
       chrome.webRequest.onHeadersReceived.addListener(
@@ -93,46 +116,40 @@ const extractHostname = (url) => {
       );
   };
 
+  // extracts the ip and the intensity and puts it in the map-
   chrome.webRequest.onResponseStarted.addListener(
-    ({ip, ...req}) => {
+    async({ip, ...req}) => {
       const origin = extractHostname(!req.initiator ? req.url : req.initiator);
       const request = requestMap.get(origin);
       if (request) {
         // add ip address to our request.
         request.ip = ip;
-        requestMap.set(req.requestId, request);
+        if (!request.hasOwnProperty("intensity")) {
+          request.intensity = await getCarbonIntensity(ip);
+        }
+        requestMap.set(origin, request);
       }
-      console.log(`Network request with ${ip}`);
-      console.table("request", req.requestId);
     },
     {urls: ['*://*/*']}
   );
 
-  const getCurrentCarbonIntensity = async(ip, requestId) => {
+  const getCarbonIntensity = async(ip) => {
     try {
-    const response = await fetch(`http://localhost:3000/${ip}`);
+    const response = await fetch(`http://localhost:3000/co2/${ip}`);
     const intensity = await response.json();
-    const request = requestMap.get(requestId);
-      if (request) {
-        // add the intensity
-        request.intensity = intensity;
-        requestMap.set(req.requestId, request);
-      }
+    return intensity;
     } catch(error) {
-      console.log("couldn't fetch from backend");
+      console.error("couldn't fetch from backend");
       return 0;
     }
   }
   
- const beerEquivalent = async() => {
+ const setBeerEquivalent = async(carbonConsumed) => {
     try {
     const beerElement = document.getElementById("beer_equivalent");
-	const carbonElement = document.getElementById("carbon_equivalent");
-	const carbonEquivalent = 555;
-    carbonElement.textContent = carbonEquivalent;
-    beerElement.textContent = carbonEquivalent/250.0; //https://www.co2everything.com/co2e-of/beer
+    beerElement.textContent = carbonConsumed/250.0; //https://www.co2everything.com/co2e-of/beer
     } catch(error) {
-      console.log("couldn't fetch from backend");
+      console.error("couldn't fetch from backend");
       return 0;
     }
   }
@@ -142,20 +159,52 @@ const extractHostname = (url) => {
     carbonIntensityElement.textContent = intensity;
   }
 
+function getLocalIPs() {
+  var ips = [];
 
-  let timer;
-  chrome.storage.sync.get(["stats"]).then((result) => {
-    if (result.stats && result.stats != "[]") {
-      //TODO get local IP address.
-      //getCurrentCarbonIntensity();
-      console.log('result', result);
-      // requestMap = new Map(JSON.parse(result));
-      //TODO change this to work with a map.
-      // totalBytes = Object.keys(stats).reduce((acc, currentKey) => acc + stats[currentKey], 0);
-    }
-    start();
-    timer = setTimeout(writeToStorage, 1000);
+  var RTCPeerConnection = window.RTCPeerConnection ||
+      window.webkitRTCPeerConnection || window.mozRTCPeerConnection;
+
+  var pc = new RTCPeerConnection({
+      // Don't specify any stun/turn servers, otherwise you will
+      // also find your public IP addresses.
+      iceServers: []
   });
-
-
-  chrome.runtime.onSuspend.addListener(clearTimeout(timer));
+  // Add a media line, this is needed to activate candidate gathering.
+  pc.createDataChannel('');
+  
+  // onicecandidate is triggered whenever a candidate has been found.
+  pc.onicecandidate = function(e) {
+      if (!e.candidate) { // Candidate gathering completed.
+          pc.close();
+          // callback(ips);
+          return;
+      }
+      var ip = /^candidate:.+ (\S+) \d+ typ/.exec(e.candidate.candidate)[1];
+      if (ips.indexOf(ip) == -1) // avoid duplicate entries (tcp/udp)
+          ips.push(ip);
+  };
+  // pc.createOffer(function(sdp) {
+  //     pc.setLocalDescription(sdp);
+  // }, function onerror() {});
+  return ips;
+}
+let timer;
+  chrome.storage.sync.get([storageKey]).then((result) => {
+    // parse if the array exists, else it throws an error.
+    if (result.storageKey && result.storageKey != "[]") {
+      requestMap = new Map(JSON.parse(result.storageKey));
+    }
+    //find local ip, and set intensity
+    if (!localIntensity) {
+    const localIps = getLocalIPs();
+    const ip = localIps.find(localIp => localIp != "192.168.0.101");
+      if (ip) {
+      localIntensity = getCarbonIntensity(ip);
+      setLocalCarbonIntensity(localIntensity);
+      }
+    }
+    timer = setInterval(writeToStorage, 1000);
+    start();
+    // chrome.runtime.onSuspend.addListener(clearInterval(timer));
+  });

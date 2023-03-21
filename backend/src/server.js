@@ -130,8 +130,8 @@ async function getCountryCodeFromIp(ip) {
   return countryCode;
 }
 
-app.get('/', (req, res) => {
-  const ip_address = res.req.originalUrl.slice(2);
+app.get('/co2/:ip', (req, res) => {
+  const ip_address = req.params.ip;
   getCountryCodeFromIp(ip_address)
     .then(countryCode => {
       console.log("Given ip", ip_address, "is in", countryCode);
