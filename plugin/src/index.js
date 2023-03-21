@@ -1,16 +1,19 @@
-const localStorage = chrome.storage.local;
 let totalBytes = 0;
+let carbonUsed = 0;
 let stats = {}
 let duration = 0
 let resetButton;
+let readMoreButton;
 
 // keys: ip and size.
-const requestMap = new Map();
+let requestMap = new Map();
+const localIntensity = 0;
 
 const resetByteTracker = () => {
   console.log("reset");
   stats = {}
-  counter = 0;
+  totalBytes = 0;
+  
   chrome.storage.sync.set({ "stats": JSON.stringify({}) }).then(() => {
     console.log("Set stats: " + JSON.stringify({}));
   });
@@ -26,19 +29,10 @@ const extractHostname = (url) => {
   
     return hostname;
   };
-  
-  const setByteLengthPerOrigin = async(origin, byteLength) => {
-    // check if it has key, else we would parse the number to "NAN" and we don't want that.
-    totalBytes += byteLength;
-    console.log('totalBytes', totalBytes);
-    console.log('origin', origin)
-    const bytePerOrigin = origin in stats ? parseInt(stats[origin]) : 0;
-    stats[origin] = bytePerOrigin + byteLength;
-  };
 
   const writeToStorage = () => {
-      chrome.storage.sync.set({ "stats": JSON.stringify(stats) }).then(() => {
-        console.log("Set stats: " + JSON.stringify(stats));
+      chrome.storage.sync.set({ "stats": JSON.stringify([...requestMap]) }).then(() => {
+        console.log("Set stats: " + JSON.stringify([...requestMap]));
       });
         try {
           const bytesElement = document.getElementById("bytes_used");
@@ -47,6 +41,8 @@ const extractHostname = (url) => {
           resetButton = document.getElementById("reset_button")
           resetButton.onclick = () => resetByteTracker();
         }
+        readMoreButton = document.getElementById("read_more_button")
+        readMoreButton.onclick = () => chrome.tabs.create({ url: chrome.runtime.getURL('readmore.html') });
         } catch (error) {
         console.log("document not defined");
       }
@@ -62,20 +58,16 @@ const extractHostname = (url) => {
        const responseHeadersContentLength = requestDetails.responseHeaders.find(element => element.name.toLowerCase() === "content-length");
        const contentLength = responseHeadersContentLength ? responseHeadersContentLength : {value: 0};
         if (contentLength.value > 0) {
-          const request = {size: contentLength.value};
-          requestMap.set(requestDetails.requestId, request);
+          const requestSize = parseInt(contentLength.value, 10);
+          const request = {size: requestSize, origin: origin};
+          requestMap.set(origin, request);
         }
-       const requestSize = parseInt(contentLength.value, 10);
-       setByteLengthPerOrigin(origin, requestSize);
-  
        return {};
     }
-  
+    // not sure if we need this.
     let filter = browser.webRequest.filterResponseData(requestDetails.requestId);
   
     filter.ondata = event => {
-      const origin = extractHostname(!requestDetails.originUrl ? requestDetails.url : requestDetails.originUrl);
-      setByteLengthPerOrigin(origin, event.data.byteLength);
       filter.write(event.data);
     };
   
@@ -90,9 +82,7 @@ const extractHostname = (url) => {
     //chrome.browserAction.setIcon({path: `icons/icon-${type}-48.png`});
   };
 
-  const extractIPAddress = req => {
-    console.log("req", req);
-  }
+
  
   const start = () => {
       setBrowserIcon('on');
@@ -105,9 +95,10 @@ const extractHostname = (url) => {
 
   chrome.webRequest.onResponseStarted.addListener(
     ({ip, ...req}) => {
-      const request = requestMap.get(req.requestId);
+      const origin = extractHostname(!req.initiator ? req.url : req.initiator);
+      const request = requestMap.get(origin);
       if (request) {
-        // get carbon intensity for iåp.
+        // add ip address to our request.
         request.ip = ip;
         requestMap.set(req.requestId, request);
       }
@@ -117,28 +108,41 @@ const extractHostname = (url) => {
     {urls: ['*://*/*']}
   );
 
-  const getCurrentCarbonIntensity = async() => {
+  const getCurrentCarbonIntensity = async(ip, requestId) => {
     try {
-    const response = await fetch("http://localhost:3000");
+    const response = await fetch(`http://localhost:3000/${ip}`);
     const intensity = await response.json();
-    const carbonIntensityElement = document.getElementById("carbon_intensity");
-    carbonIntensityElement.textContent = intensity;
+    const request = requestMap.get(requestId);
+      if (request) {
+        // add the intensity
+        request.intensity = intensity;
+        requestMap.set(req.requestId, request);
+      }
     } catch(error) {
       console.log("couldn't fetch from backend");
       return 0;
     }
   }
 
+  const setLocalCarbonIntensity = (intensity) => {
+    const carbonIntensityElement = document.getElementById("carbon_intensity");
+    carbonIntensityElement.textContent = intensity;
+  }
 
-let timer;
+
+  let timer;
   chrome.storage.sync.get(["stats"]).then((result) => {
-    getCurrentCarbonIntensity();
-    stats = JSON.parse(result["stats"]) ?? {};
-    totalBytes = Object.keys(stats).reduce((acc, currentKey) => acc + stats[currentKey], 0);
+    if (result.stats && result.stats != "[]") {
+      //TODO get local IP address.
+      //getCurrentCarbonIntensity();
+      console.log('result', result);
+      // requestMap = new Map(JSON.parse(result));
+      //TODO change this to work with a map.
+      // totalBytes = Object.keys(stats).reduce((acc, currentKey) => acc + stats[currentKey], 0);
+    }
     start();
-    timer = setTimeout(writeToStorage, 3000);
+    timer = setTimeout(writeToStorage, 1000);
   });
 
-  chrome.runtime.onSuspend.addListener(clearTimeout(timer));
 
-  
+  chrome.runtime.onSuspend.addListener(clearTimeout(timer));
