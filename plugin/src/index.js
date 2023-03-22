@@ -2,8 +2,8 @@ let localIntensity = 0;
 let requestMap = new Map();
 let resetButton;
 let readMoreButton;
-const downloadConstant = 1;
-const uploadConstant = 2;
+const uploadConstant = 0.81/1024**3; // [kWh/byte] Use same conversion factor as websitecarbon.com.
+const downloadConstant = 0.81/1024**3; // [kWh/byte] Same for now!
 const storageKey = "energy_usage_map";
 
 // keys: ip and size.
@@ -38,8 +38,7 @@ const extractHostname = (url) => {
       if (!next) {
         break;
       }
-      //TODO convert this to actual kwh, @Elias
-      Co2Consumed += (next.intensity * next.size * uploadConstant) + (next.size * localIntensity * downloadConstant)
+      Co2Consumed += (next.intensity * next.size * uploadConstant) + (next.size * localIntensity * downloadConstant); // [gCO2equiv]
     }
     return Co2Consumed
   }
