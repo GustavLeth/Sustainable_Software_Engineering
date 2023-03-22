@@ -181,9 +181,6 @@ function getLocalIPs() {
       if (ips.indexOf(ip) == -1) // avoid duplicate entries (tcp/udp)
           ips.push(ip);
   };
-  // pc.createOffer(function(sdp) {
-  //     pc.setLocalDescription(sdp);
-  // }, function onerror() {});
   return ips;
 }
 let timer;
@@ -203,5 +200,7 @@ let timer;
     }
     timer = setInterval(writeToStorage, 1000);
     start();
-    // chrome.runtime.onSuspend.addListener(clearInterval(timer));
+    // Not sure if this does anything - but if it does it removes the instance of the app when you switch to another tab, and the other tab then starts it's own instance.
+    // The two instances use the same data storage, so data shouldn't be lost (maybe a little bit since we only write once a second.) 
+    chrome.runtime.onSuspend.addListener(clearInterval(timer));
   });
