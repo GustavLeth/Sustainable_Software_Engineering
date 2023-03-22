@@ -38,12 +38,9 @@ const extractHostname = (url) => {
       if (!next) {
         break;
       }
+      //TODO convert this to actual kwh, @Elias
       Co2Consumed += (next.intensity * next.size * uploadConstant) + (next.size * localIntensity * downloadConstant)
     }
-    // const arrayFromMap = [...requestMap].map(request => {return {intensity: request.value.intensity ?? 0, size: request.value.size ?? 0}});
-    // const Co2Consumed = arrayFromMap.reduce((acc, req) => {
-    //   return acc + (req.intensity * req.size * uploadConstant) + (req.size * localIntensity * downloadConstant);
-    // }, 0);
     return Co2Consumed
   }
 
