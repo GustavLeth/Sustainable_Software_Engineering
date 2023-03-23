@@ -1,13 +1,9 @@
-// etLocalIPs(function(ips) { // <!-- ips is an array of local IP addresses.
-//     console.log('ips.join', ips.join('\n'));
-// });
-
-export function getLocalIPs() {
+const getLocalIPs = async() => {
     var ips = [];
-
+  
     var RTCPeerConnection = window.RTCPeerConnection ||
         window.webkitRTCPeerConnection || window.mozRTCPeerConnection;
-
+  
     var pc = new RTCPeerConnection({
         // Don't specify any stun/turn servers, otherwise you will
         // also find your public IP addresses.
@@ -28,7 +24,17 @@ export function getLocalIPs() {
             ips.push(ip);
     };
     pc.createOffer(function(sdp) {
-        pc.setLocalDescription(sdp);
+      pc.setLocalDescription(sdp);
     }, function onerror() {});
-    return ips;
-}
+    const localIp = ips.find(localIp => localIp != "192.168.0.101");
+    console.log("!localIp", !localIp);
+    if(!localIp) {
+      setTimeout(async() => {
+        return await getLocalIPs();
+      }, 1000);
+    } else {
+      localIntensity = await getCarbonIntensity(localIp);
+      setLocalCarbonIntensity(localIntensity);
+      return;
+    }
+  }

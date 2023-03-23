@@ -109,6 +109,7 @@ async function fetchCountryCodeFromIp(ip) {
   const url = `https://ipinfo.io/${ip}?token=dada096b45743a`
   const response = await fetch(url);
   const data = await response.json();
+  console.log('data', data);
   return data.country;
 }
 
@@ -123,10 +124,9 @@ async function getCountryCodeFromIp(ip) {
       return countryCode.trim();
     }
   }
-
+  console.log('Did not find ip in db');
   const countryCode = await fetchCountryCodeFromIp(ip);
-  await writeFileAsync(filePath, `${ip},${countryCode}\n`, { flag: "a" });
-
+  if(countryCode) await writeFileAsync(filePath, `${ip},${countryCode}\n`, { flag: "a" });
   return countryCode;
 }
 
@@ -139,7 +139,12 @@ app.get('/co2/:ip', (req, res) => {
     })
     .then(intensity => {
       console.log('intensity', intensity);
+      if(intensity) {
       res.send(intensity.toString());
+    } else {
+      res.status(404);
+      res.send();
+    }
     })
     .catch(error => {
       console.error(error);
