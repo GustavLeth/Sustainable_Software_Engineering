@@ -1,15 +1,15 @@
-let localIntensity = 0;
+let localIntensity;
 let requestMap = new Map();
 let resetButton;
 let readMoreButton;
 const uploadConstant = 0.81/1024**3; // [kWh/byte] Use same conversion factor as websitecarbon.com.
 const downloadConstant = 0.81/1024**3; // [kWh/byte] Same for now!
 const storageKey = "energy_usage_map";
-
+const includeLogs = true;
+includeLogs && console.log("top log");
 // keys: ip and size.
 const resetByteTracker = () => {
   console.log("reset");
-  totalBytes = 0;
   
   chrome.storage.sync.set({ storageKey: JSON.stringify(new Map()) }).then(() => {
     console.log(`Set ${storageKey}: ` + JSON.stringify(new Map()));
@@ -38,12 +38,16 @@ const extractHostname = (url) => {
       if (!next) {
         break;
       }
-      Co2Consumed += (next.intensity * next.size * uploadConstant) + (next.size * localIntensity * downloadConstant); // [gCO2equiv]
+      console.log('next.intensity * next.size * uploadConstant) + (next.size * localIntensity * downloadConstant', next.intensity, next.size, uploadConstant, next.size, localIntensity, downloadConstant)
+      Co2Consumed += ((next.intensity ?? 1) * next.size * uploadConstant) + ((localIntensity ?? 1) * next.size * downloadConstant); // [gCO2equiv]
     }
-    return Co2Consumed
+    console.log('Co2Consumed', Co2Consumed);
+
+    return isNaN(Co2Consumed) ? 0 : Co2Consumed;
   }
 
   const writeToStorage = () => {
+      console.log("write to storage");
       chrome.storage.sync.set({ storageKey: JSON.stringify([...requestMap]) });
       try {
         //   const bytesElement = document.getElementById("bytes_used");
@@ -120,8 +124,9 @@ const extractHostname = (url) => {
       if (request) {
         // add ip address to our request.
         request.ip = ip;
-        if (!request.hasOwnProperty("intensity")) {
+        if (Object.keys(request).includes("intensity")) {
           request.intensity = await getCarbonIntensity(ip);
+          console.log('request.intensity', request.intensity);
         }
         requestMap.set(origin, request);
       }
@@ -155,7 +160,7 @@ const extractHostname = (url) => {
     carbonIntensityElement.textContent = intensity;
   }
 
-function getLocalIPs() {
+const getLocalIPs = async() => {
   var ips = [];
 
   var RTCPeerConnection = window.RTCPeerConnection ||
@@ -180,26 +185,35 @@ function getLocalIPs() {
       if (ips.indexOf(ip) == -1) // avoid duplicate entries (tcp/udp)
           ips.push(ip);
   };
-  return ips;
+  pc.createOffer(function(sdp) {
+    pc.setLocalDescription(sdp);
+  }, function onerror() {});
+  const localIp = ips.find(localIp => localIp != "192.168.0.101");
+  console.log("!localIp", !localIp);
+  if(!localIp) {
+    setTimeout(async() => {
+      return await getLocalIPs();
+    }, 1000);
+  } else {
+    localIntensity = await getCarbonIntensity(localIp);
+    setLocalCarbonIntensity(localIntensity);
+  }
 }
-let timer;
-  chrome.storage.sync.get([storageKey]).then((result) => {
+
+  chrome.storage.sync.get([storageKey]).then(async(result) => {
+    includeLogs && console.log("got from log");
     // parse if the array exists, else it throws an error.
     if (result.storageKey && result.storageKey != "[]") {
       requestMap = new Map(JSON.parse(result.storageKey));
     }
-    //find local ip, and set intensity
+    //finds the local IP and sets the local intensity.
     if (!localIntensity) {
-    const localIps = getLocalIPs();
-    const ip = localIps.find(localIp => localIp != "192.168.0.101");
-      if (ip) {
-      localIntensity = getCarbonIntensity(ip);
-      setLocalCarbonIntensity(localIntensity);
-      }
+      getLocalIPs();
     }
-    timer = setInterval(writeToStorage, 1000);
+    includeLogs && console.log("writing to storage");
+    const timer = setInterval(writeToStorage, 1000);
     start();
     // Not sure if this does anything - but if it does it removes the instance of the app when you switch to another tab, and the other tab then starts it's own instance.
     // The two instances use the same data storage, so data shouldn't be lost (maybe a little bit since we only write once a second.) 
-    chrome.runtime.onSuspend.addListener(clearInterval(timer));
+    // chrome.runtime.onSuspend.addListener(clearInterval(timer));
   });
