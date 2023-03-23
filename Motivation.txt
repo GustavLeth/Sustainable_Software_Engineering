@@ -1,0 +1,10 @@
+The currently existing options for measuring carbon when using the internet, is limited to measuring 
+the specific website that you are visiting. This can give you an idea of how good the idividual website 
+is for the environment. However, this information is limited to only the base version of the website you
+visit and to individual website. This can make it hard for the end user to grasp the amount of data that
+they actually use during a browsing session. Our tool measures the entire session in real time. This
+means that the user at any time can se how much they have spend in the session and can se the total
+spend. This can be a crusial tool to make the general web user realize how much energy using the internet
+consumes. Furthermore, we want to present this data in a way that the general public can relate to. 
+Units like CO_2 equivalent or kWh are hard to grasp and therefore not optimal for educational purposes.
+ 
