@@ -63,10 +63,6 @@ const extractHostname = (url) => {
           resetButton = document.getElementById("reset_button")
           resetButton.onclick = () => resetByteTracker();
         }
-        if (!readMoreButton) {
-          readMoreButton = document.getElementById("read_more_button")
-          readMoreButton.onclick = () => chrome.tabs.create({ url: chrome.runtime.getURL('readmore.html') });
-        }
       } catch (error) {
         console.error("document not defined", error);
       }

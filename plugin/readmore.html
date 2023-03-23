@@ -2,30 +2,21 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <title>My Chrome Extension</title>
+    <title>Carbon Tracker</title>
     <link rel="stylesheet" href="style.css">
   </head>
   <body>
     <div class="container">
-      <p>This chrome extension calculates the energy usage during a browsing session. <br>
-      <br>
-      It does so by checking the amount of data which the browser recieves and then calculates how much energi that takes. <br>
-      From this we connect the IP adress to a given country/region to find how energy was created. From this we can calculate the CO2 equivalent from the energi used in the session and transform this number to an easy to grasp equivalent. <br>
-      <br>
-
-
-      To calculate the energy usage we use the ratio 0.81 kWh/GB. This number is from "https://sustainablewebdesign.org/calculating-digital-emissions/". <br>
-      This number was chosen since there is no consensus on one "true" number for this,  looking at "Electricity Intensity of Internet DataTransmission" by J. Alsan and K. Mayers from 2015, we can see that the energy consumption pr. data unit varies up to five orders of magnitude. <br>
-      From this we use an IP registry to find which country/region the IP belongs to. We then connect to the XXXXXXXXXX api to find the average CO2 pr. kWh. <br>
-
-
-      <br>
-      Continued work: <br>
-      Making a tier list of which websites was used the most during the session and show the amount of CO2 used on each. <br>
-
-
-
-
+		<p>
+		<h2>Carbon Tracker is a chrome extension that approximates the carbon equivalents emitted during a browsing session. </h2>
+		It does so by checking the amount of data which the browser receives and connecting the IP adress of the sender to a given country. Knowing which country the server is in lets us approximate how carbon intensive the energy it uses is. <br>
+		<br>
+		To calculate the energy usage we use the ratio 0.81 kWh/GB which is the same as is used on <a href="https://sustainablewebdesign.org/calculating-digital-emissions/">sustainablewebdesign.org<a/>. <br>
+		This number was chosen since there is no consensus on one "true" number for this, looking at "Electricity Intensity of Internet DataTransmission" by J. Alsan and K. Mayers from 2015, we can see that the energy consumption pr. data unit varies up to five orders of magnitude. <br>
+		Lastly we connect to electricitymaps api get the real time value for gCO2equiv/kWh in the country where the server is located.
+		<br>
+		Continued work:
+		Making a tier list of which websites was used the most during the session and show the amount of CO2 used on each. <br>
       </p>
     </div>
   </body>
