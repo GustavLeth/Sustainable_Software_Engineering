@@ -1,16 +1,7 @@
 let localIntensity;
 let requestMap = new Map();
-let resetButton;
-const uploadConstant = 0.81/1024**3; // [kWh/byte] Use same conversion factor as websitecarbon.com.
-const downloadConstant = 0.81/1024**3; // [kWh/byte] Same for now!
 // TODO this could probably be improved
 const privateIps = ["10.0.0", "172.16.0", "192.168.0", "127.0.0", "169.254.0"]
-// keys: ip and size.
-const resetByteTracker = () => {
-  console.log("reset");
-  requestMap = new Map();
-  chrome.storage.local.set({ storageKey: JSON.stringify(new Map()) });
-};
 
 const extractHostname = (url) => {
     let hostname = url.indexOf("//") > -1 ? url.split('/')[2] : url.split('/')[0];
@@ -21,34 +12,8 @@ const extractHostname = (url) => {
     return hostname;
   };
 
-  const calculateCo2Usage = () => {
-    if (requestMap.size < 1) {
-      return 0;
-    }
-    const mapIterator = requestMap.values();
-    let Co2Consumed = 0;
-    while(true) {
-      const next = mapIterator.next().value;
-      if (!next) {
-        break;
-      }
-      Co2Consumed += ((next.intensity ?? 1) * next.size * uploadConstant) + ((localIntensity ?? 1) * next.size * downloadConstant); // [gCO2equiv]
-    }
-
-    return isNaN(Co2Consumed) ? 0 : Co2Consumed;
-  }
-
   const writeToStorage = () => {
       chrome.storage.local.set({ storageKey: JSON.stringify([...requestMap]) });
-      try {
-        // TODO move these somewhere else, not sure how i hook into the lifecycle of the app at the right spot.
-        if (!resetButton) {
-          resetButton = document.getElementById("reset_button");
-          resetButton.onclick = () => resetByteTracker();
-        }
-      } catch (error) {
-        console.error("document not defined", error);
-      }
   };
   
   const isChrome = () => {
@@ -68,7 +33,6 @@ const extractHostname = (url) => {
         }
         return;
     }
-    // not sure if we need this.
     let filter = browser.webRequest.filterResponseData(requestDetails.requestId);
   
     filter.ondata = event => {
@@ -86,6 +50,7 @@ const extractHostname = (url) => {
     //chrome.browserAction.setIcon({path: `icons/icon-${type}-48.png`});
   };
 
+  
 
   const start = () => {
       setBrowserIcon('on');
@@ -95,16 +60,6 @@ const extractHostname = (url) => {
         ['responseHeaders']
       );
   };
-
-  const setCo2Consumed = () => {
-    const Co2Consumed = calculateCo2Usage();
-    const carbonUsedElement = document.getElementById("carbon_equivalent");
-    if (carbonUsedElement) {
-      setBeerEquivalent(Co2Consumed);
-      carbonUsedElement.textContent = Co2Consumed;
-    }
-  }
-
   // extracts the ip and the intensity and puts it in the map-
   chrome.webRequest.onResponseStarted.addListener(
     async({ip, ...req}) => {
@@ -118,11 +73,9 @@ const extractHostname = (url) => {
           request.intensity = !isNaN(intensity) ? intensity : 1;
           if(!localIntensity || 2 > localIntensity) {
             localIntensity = intensity;
-            setLocalCarbonIntensity(intensity);
           }
         }
         requestMap.set(origin, request);
-        setCo2Consumed();
       }
     },
     {urls: ['*://*/*']}
@@ -137,16 +90,6 @@ const extractHostname = (url) => {
     });
       return response;
     };
-  
- const setBeerEquivalent = async(carbonConsumed) => {
-    const beerElement = document.getElementById("beer_equivalent");
-    beerElement.textContent = carbonConsumed/250.0; //https://www.co2everything.com/co2e-of/beer
-  }
-
-  const setLocalCarbonIntensity = (intensity) => {
-    const carbonIntensityElement = document.getElementById("carbon_intensity");
-    carbonIntensityElement.textContent = intensity;
-  }
 
   const isIpInList = (ip, privateIps) => {
     privateIps.forEach(privateIp => {
@@ -186,15 +129,13 @@ async function getLocalIPs() {
       nonLocalHostIps.forEach(async(ip) => {
         try {
           const intensityResponse = await getCarbonIntensity(ip);
-
           // get's caught by the try catch if the ip was not found, and then we move on to the next.
           localIntensity = intensityResponse;
-          setLocalCarbonIntensity(localIntensity);
-          const intensityObj = {intensity: localIntensity, time: Date.now()};
+          const intensityObj = {intensity: intensityResponse, time: Date.now()};
           chrome.storage.local.set({ localIntensity: JSON.stringify(intensityObj) });
           return;
       } catch(error) {
-       console.log(`404 - ${ip} not found`);   
+       console.error(`404 - ${ip} not found`);   
       }
       });
     };
@@ -204,14 +145,12 @@ async function getLocalIPs() {
   }
 
   chrome.storage.local.get("storageKey").then(async(result) => {
-    const timer = setInterval(writeToStorage, 5000);
+    const timer = setInterval(writeToStorage, 500);
     // parse if the array exists, else it throws an error.
     // ugly this.
     if (result && result.storageKey && result.storageKey != "[]") {
       requestMap = new Map(JSON.parse(result.storageKey));
-      setCo2Consumed();
     }
-
     start();
   });
 
@@ -220,20 +159,18 @@ async function getLocalIPs() {
       if(result && result.time < Date.now() - 1000*60*60) {
         if (result.intensity) {
           localIntensity = result.intensity;
-          setCo2Consumed();
           return;
         }
       }
-      getLocalIPs();
+      //TODO get local ip from server when it's hosted. Perhaps just get intensity of nearest google server till then.
+      // getLocalIPs();
     });
 
-  
+    const handleMessage = (request) => {
+      if ('reset' === request.action) {
+        requestMap = new Map();
+        chrome.storage.local.set({ storageKey: JSON.stringify([...requestMap])});
+      }
+    }
 
-  // chrome.storage.onChanged.addListener((changes, namespace) => {
-  //   for (let [key, { oldValue, newValue }] of Object.entries(changes)) {
-  //     console.log(
-  //       `Storage key "${key}" in namespace "${namespace}" changed.`,
-  //       `Old value was "${oldValue}", new value is "${newValue}".`
-  //     );
-  //   }
-  // });
+    chrome.runtime.onMessage.addListener(handleMessage);

@@ -5,6 +5,7 @@
     "version": "1.0",
     "permissions": [
       "tabs",
+      "activeTab",
       "storage",
       "webRequest",
       "nativeMessaging"
@@ -12,6 +13,10 @@
     "host_permissions": [
       "*://*.google.com/"
     ],
+    "background": {
+    "service_worker": "src/index.js",
+    "type": "module"
+  },
 
     "action": {
       "default_popup": "index.html",
