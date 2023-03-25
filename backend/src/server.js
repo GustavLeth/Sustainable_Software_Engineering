@@ -131,6 +131,7 @@ async function getCountryCodeFromIp(ip) {
 }
 
 app.get('/co2/:ip', (req, res) => {
+  console.log('req.socket.remoteAddress', req.socket.remoteAddress);
   const ip_address = req.params.ip;
   getCountryCodeFromIp(ip_address)
     .then(countryCode => {
