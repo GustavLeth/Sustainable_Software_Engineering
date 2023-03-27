@@ -121,7 +121,8 @@ const extractHostname = (url) => {
       }
       //TODO get local ip from server when it's hosted. Perhaps just get intensity of nearest google server till then.
       // getLocalIPs();
-      localIntensity = await getLocalIp();
+      const localIP = await getLocalIp();
+      localIntensity = await getCarbonIntensity(localIP);
       const intensityObj = {intensity: localIntensity, time: Date.now()};
       chrome.storage.local.set({ localIntensity: JSON.stringify(intensityObj) });
     });
