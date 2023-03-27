@@ -4,6 +4,7 @@ const moment = require('moment');
 const { promisify } = require("util");
 const readFileAsync = promisify(fs.readFile);
 const writeFileAsync = promisify(fs.writeFile);
+const electricitymapsApiKey = process.env.ELECTRICITYMAPS_KEY;
 
 var cors = require('cors');
 const app = express()
@@ -84,7 +85,7 @@ async function fetchCarbonData(countryCode) {
       'X-BLOBR-KEY': '0fxlgCW4i8k9pXutI6UpvHsLFCv9VPc4',
     },
   };
-  const url = `https://api-access.electricitymaps.com/2w97h07rvxvuaa1g/carbon-intensity/forecast?zone=${countryCode}`;
+  const url = `https://api-access.electricitymaps.com/${electricitymapsApiKey}/carbon-intensity/forecast?zone=${countryCode}`;
   const response = await fetch(url, options);
   const data = await response.json();
   return data;
