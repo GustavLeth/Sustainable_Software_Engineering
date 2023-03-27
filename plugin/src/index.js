@@ -71,6 +71,7 @@ const extractHostname = (url) => {
         if (!Object.keys(request).includes("intensity")) {
           const intensity = await getCarbonIntensity(ip);
           request.intensity = !isNaN(intensity) ? intensity : 1;
+          // just to be safe if the local ip couldn't be found.
           if(!localIntensity || 2 > localIntensity) {
             localIntensity = intensity;
           }
@@ -90,59 +91,13 @@ const extractHostname = (url) => {
     });
       return response;
     };
-
-  const isIpInList = (ip, privateIps) => {
-    privateIps.forEach(privateIp => {
-      if(privateIp.includes(ip)) {
-        return true;
-      }
-    });
-    return false;
-  } 
-// This works but i'm not touching it.
-async function getLocalIPs() {
-  var ips = [];
-
-  var RTCPeerConnection = window.RTCPeerConnection ||
-      window.webkitRTCPeerConnection || window.mozRTCPeerConnection;
-
-  var pc = new RTCPeerConnection({
-      // Don't specify any stun/turn servers, otherwise you will
-      // also find your public IP addresses.
-      iceServers: []
-  });
-  // Add a media line, this is needed to activate candidate gathering.
-  pc.createDataChannel('');
-  
-  // onicecandidate is triggered whenever a candidate has been found.
-  pc.onicecandidate = async function(e) {
-      if (!e.candidate) { // Candidate gathering completed.
-          pc.close();
-          return;
-      }
-      var ip = /^candidate:.+ (\S+) \d+ typ/.exec(e.candidate.candidate)[1];
-      if (ips.indexOf(ip) == -1) // avoid duplicate entries (tcp/udp)
-          ips.push(ip);
-      const nonLocalHostIps = ips.filter(ipAddress => isIpInList(ipAddress, privateIps));
-      // some ip's are private ip's and won't have an address.
-      // I'm not sure if we can check which ones are private without trying.
-      nonLocalHostIps.forEach(async(ip) => {
-        try {
-          const intensityResponse = await getCarbonIntensity(ip);
-          // get's caught by the try catch if the ip was not found, and then we move on to the next.
-          localIntensity = intensityResponse;
-          const intensityObj = {intensity: intensityResponse, time: Date.now()};
-          chrome.storage.local.set({ localIntensity: JSON.stringify(intensityObj) });
-          return;
-      } catch(error) {
-       console.error(`404 - ${ip} not found`);   
-      }
-      });
+    // calls an external service to get the ip.
+    const getLocalIp = async() => {
+      const response = fetch("http://api.ipaddress.com/myip?format=json")
+      .then(res => res.json())
+      .then(data => { return data.ipaddress });
+      return response;
     };
-    pc.createOffer(function(sdp) {
-      pc.setLocalDescription(sdp);
-  }, function onerror() {});
-  }
 
   chrome.storage.local.get("storageKey").then(async(result) => {
     const timer = setInterval(writeToStorage, 500);
@@ -154,6 +109,8 @@ async function getLocalIPs() {
     start();
   });
 
+ 
+
     chrome.storage.local.get("localIntensity").then(async(result) => {
       // if our intensity is more than an hour old, we remove it.
       if(result && result.time < Date.now() - 1000*60*60) {
@@ -164,11 +121,15 @@ async function getLocalIPs() {
       }
       //TODO get local ip from server when it's hosted. Perhaps just get intensity of nearest google server till then.
       // getLocalIPs();
+      localIntensity = await getLocalIp();
+      const intensityObj = {intensity: localIntensity, time: Date.now()};
+      chrome.storage.local.set({ localIntensity: JSON.stringify(intensityObj) });
     });
 
     const handleMessage = (request) => {
       if ('reset' === request.action) {
         requestMap = new Map();
+        
         chrome.storage.local.set({ storageKey: JSON.stringify([...requestMap])});
       }
     }
