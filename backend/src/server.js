@@ -62,7 +62,7 @@ function getCarbonData(countryCode) {
 }
 
 function saveCarbonData(data) {
-  console.log('data', data);
+  console.log('saveCarbonData data', data);
   const updatedAt = moment(data.forecast[0].datetime).format(DT_FMT);
   const zone = data.zone;
   const filename = `./carbon_data/${updatedAt}_${zone}.txt`;
@@ -111,7 +111,7 @@ async function fetchCountryCodeFromIp(ip) {
   const url = `https://ipinfo.io/${ip}?token=dada096b45743a`
   const response = await fetch(url);
   const data = await response.json();
-  console.log('data', data);
+  console.log('fetchCountryCodeFromIp response', data);
   return data.country;
 }
 
