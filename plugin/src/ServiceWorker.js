@@ -25,39 +25,34 @@ const extractHostname = (url) => {
       const request = requestMap.get(origin) ?? {}
       const size = parseInt(contentLength.value, 10) + requestMap.get(origin)?.size ?? 0;
       requestMap.set(origin, {...request, size, origin});
-      console.log(' {...request, size, origin}',  {...request, size, origin})
     }
   };
   
   // extracts the ip and the intensity and puts it in the map-
   const onResponseStartedListener = async(response) => {
-    console.log('response', response);
     const {ip, initiator, url, statusCode} = response;
+    //TODO this might need some more things, but I think it doesn't loop requests from the backend anymore.
+    // But if it does, this is the place.
     if(ip == "::1" || statusCode > 299) {
       return;
     }
     const origin = extractHostname(initiator ?? url);
       const request = requestMap.get(origin);
-      console.log('request', JSON.stringify(request));
-      // if request doesn't have intensity, or if the intensity is more than an hour old.
-      if (request && !request.intensity || (request.intensityTime && request.intensityTime > Date.now() - 1000*60*60)) {
-        let translatedIntensity;
-        // add ip address to our request.
-        request.ip = ip;
-        // if we don't have the intensity of this origin we find it.
+      // Check if intensity time is too old.
+      if (request?.intensityTime && request.intensityTime > Date.now() - 1000*60*60) {
           try {
-          const intensity = await getCarbonIntensity(ip);
-          translatedIntensity = !isNaN(intensity) ? intensity : 1;
-          // just to be safe if the local ip couldn't be found. It shouldn't be a problem now since we ping an external service.
-          // In the future we will pull it from the backend.
-          if(!localIntensity) {
-            localIntensity = intensity;
+            request.ip = ip;
+            const intensityResponse = await getCarbonIntensity(ip);
+            const intensity = !isNaN(intensityResponse) ? intensityResponse : 1;
+            // just to be safe if the local ip couldn't be found. It shouldn't be a problem now since we ping an external service.
+            // In the future we will pull it from the backend.
+            if(!localIntensity) {
+              localIntensity = intensity;
+            }
+            requestMap.set(origin, {...requestMap.get(origin), intensity: intensity, intensityTime: Date.now()});
+          } catch (error) {
+            console.log(error);
           }
-      } catch (error) {
-        console.log(error);
-      }
-      // we fetch it agian, just to make sure it isn't overwritten in the meantime.
-      requestMap.set(origin, {...requestMap.get(origin), intensity: translatedIntensity, intensityTime: Date.now()});
     }
   }
 
@@ -85,7 +80,13 @@ const extractHostname = (url) => {
       }
     }
 
-    const start = () => {
+    const setLocalIp = async(ip) => {
+      localIntensity = await getCarbonIntensity(ip);
+      const intensityObj = {intensity: localIntensity, time: Date.now()};
+      chrome.storage.local.set({ localIntensity: JSON.stringify(intensityObj) });
+    }
+
+    const start = async() => {
       chrome.webRequest.onHeadersReceived.addListener(
         onHeadersReceivedListener,
         {urls: ['<all_urls>']},
@@ -104,18 +105,14 @@ const extractHostname = (url) => {
           requestMap = new Map(JSON.parse(result.storageKey));
         }
       });
-      // fetch the local intensity.
-      chrome.storage.local.get("localIntensity").then(async(result) => {
-        // if our intensity is less than an hour old we keep it.
-        if(result && result.time < Date.now() - 1000*60*60 && result.intensity) {
-            localIntensity = result.intensity;
-        } else {
-          const localIP = await getLocalIp();
-          localIntensity = await getCarbonIntensity(localIP);
-          const intensityObj = {intensity: localIntensity, time: Date.now()};
-          chrome.storage.local.set({ localIntensity: JSON.stringify(intensityObj) });
-        }
-    });
+        //get and set the localintensity
+        const localIP = await getLocalIp();
+        setLocalIp(localIP);
+        // set interval to fetch once an hour.
+        setInterval(async() => {
+          const ip = await getLocalIp();
+          setLocalIp(ip);
+        }, 1000*60*60);
   };
 
 start();
