@@ -22,22 +22,27 @@ const extractHostname = (url) => {
     const responseHeadersContentLength = responseHeaders.find(header => header.name.toLowerCase() === "content-length");
     const contentLength = responseHeadersContentLength ?? {value: 0};
     if (contentLength.value > 0) {
-      const currentSize = requestMap.has(origin) ? requestMap.get(origin).size : 0;
-      const size = parseInt(contentLength.value, 10) + currentSize;
-      const request = {size, origin};
-      requestMap.set(origin, request);
+      const request = requestMap.get(origin) ?? {}
+      const size = parseInt(contentLength.value, 10) + requestMap.get(origin)?.size ?? 0;
+      requestMap.set(origin, {...request, size, origin});
     }
   };
   
   // extracts the ip and the intensity and puts it in the map-
   const onResponseStartedListener = async(response) => {
-    const {ip, initiator, url} = response;
+    console.log('response', response);
+    const {ip, initiator, url, statusCode} = response;
+    if(ip == "::1" || statusCode > 299) {
+      return;
+    }
     const origin = extractHostname(initiator ?? url);
       const request = requestMap.get(origin);
-      if (request) {
+      console.log('request', JSON.stringify(request));
+      if (!request?.intensity) {
         // add ip address to our request.
         request.ip = ip;
-        if (!Object.keys(request).includes("intensity")) {
+        // if we don't have the intensity of this origin we find it.
+          try {
           const intensity = await getCarbonIntensity(ip);
           request.intensity = !isNaN(intensity) ? intensity : 1;
           // just to be safe if the local ip couldn't be found. It shouldn't be a problem now since we ping an external service.
@@ -45,9 +50,11 @@ const extractHostname = (url) => {
           if(!localIntensity) {
             localIntensity = intensity;
           }
-        }
-        requestMap.set(origin, request);
+      } catch (error) {
+        console.log(error);
       }
+      requestMap.set(origin, request);
+    }
   }
 
   const getCarbonIntensity = async(ip) => {

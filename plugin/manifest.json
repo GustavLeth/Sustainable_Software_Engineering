@@ -8,7 +8,7 @@
       "webRequest"
     ],
     "host_permissions": [
-      "*://*.google.com/"
+      "https://*/*"
     ],
     "background": {
     "service_worker": "src/ServiceWorker.js",

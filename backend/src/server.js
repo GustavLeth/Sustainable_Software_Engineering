@@ -62,6 +62,7 @@ function getCarbonData(countryCode) {
 }
 
 function saveCarbonData(data) {
+  console.log('data', data);
   const updatedAt = moment(data.forecast[0].datetime).format(DT_FMT);
   const zone = data.zone;
   const filename = `./carbon_data/${updatedAt}_${zone}.txt`;
@@ -85,7 +86,7 @@ async function fetchCarbonData(countryCode) {
       'X-BLOBR-KEY': '0fxlgCW4i8k9pXutI6UpvHsLFCv9VPc4',
     },
   };
-  const url = `https://api-access.electricitymaps.com/${electricitymapsApiKey}/carbon-intensity/forecast?zone=${countryCode}`;
+  const url = `https://api-access.electricitymaps.com/2w97h07rvxvuaa1g/carbon-intensity/forecast?zone=${countryCode}`;
   const response = await fetch(url, options);
   const data = await response.json();
   return data;
