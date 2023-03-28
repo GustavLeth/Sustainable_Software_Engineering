@@ -25,6 +25,7 @@ const extractHostname = (url) => {
       const request = requestMap.get(origin) ?? {}
       const size = parseInt(contentLength.value, 10) + requestMap.get(origin)?.size ?? 0;
       requestMap.set(origin, {...request, size, origin});
+      console.log(' {...request, size, origin}',  {...request, size, origin})
     }
   };
   
@@ -38,13 +39,15 @@ const extractHostname = (url) => {
     const origin = extractHostname(initiator ?? url);
       const request = requestMap.get(origin);
       console.log('request', JSON.stringify(request));
-      if (!request?.intensity) {
+      // if request doesn't have intensity, or if the intensity is more than an hour old.
+      if (request && !request.intensity || (request.intensityTime && request.intensityTime > Date.now() - 1000*60*60)) {
+        let translatedIntensity;
         // add ip address to our request.
         request.ip = ip;
         // if we don't have the intensity of this origin we find it.
           try {
           const intensity = await getCarbonIntensity(ip);
-          request.intensity = !isNaN(intensity) ? intensity : 1;
+          translatedIntensity = !isNaN(intensity) ? intensity : 1;
           // just to be safe if the local ip couldn't be found. It shouldn't be a problem now since we ping an external service.
           // In the future we will pull it from the backend.
           if(!localIntensity) {
@@ -53,7 +56,8 @@ const extractHostname = (url) => {
       } catch (error) {
         console.log(error);
       }
-      requestMap.set(origin, request);
+      // we fetch it agian, just to make sure it isn't overwritten in the meantime.
+      requestMap.set(origin, {...requestMap.get(origin), intensity: translatedIntensity, intensityTime: Date.now()});
     }
   }
 
