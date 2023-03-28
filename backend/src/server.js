@@ -83,7 +83,7 @@ async function fetchCarbonData(countryCode) {
   const options = {
   method: 'GET',
   headers: {
-      'X-BLOBR-KEY': '0fxlgCW4i8k9pXutI6UpvHsLFCv9VPc4',
+      'X-BLOBR-KEY': 'O4cqkTdqtyH68Yn8cw54nEFZqE43rALe',
     },
   };
   const url = `https://api-access.electricitymaps.com/2w97h07rvxvuaa1g/carbon-intensity/forecast?zone=${countryCode}`;
