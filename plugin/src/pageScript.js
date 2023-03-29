@@ -25,8 +25,8 @@ const readFromStorage = async() => {
       const Co2Consumed = Array.from(requestMap.values()).reduce((accumalator, currentValue) => {
         return accumalator + ((currentValue.intensity ?? 1) * currentValue.size * uploadConstant) + ((localIntensity ?? 1) * currentValue.size * downloadConstant)
       }, 0);
-      beerElement.textContent = Co2Consumed/250.0 ?? 0;
-      carbonUsedElement.textContent = Co2Consumed;
+      beerElement.textContent = (Co2Consumed/250.0).toFixed(3) ?? 0;
+      carbonUsedElement.textContent = Co2Consumed.toFixed(3);
     }
   });
 };
