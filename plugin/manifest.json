@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Carbon emission tracker",
-    "description": "This is an extension that tracks your carbon usage by monitoring HTTP content length headers and the carbon intensity of the grid in your area, and the servers area.",
+    "description": "Local carbon consumption tracker",
     "version": "1.0",
     "permissions": [
       "storage",

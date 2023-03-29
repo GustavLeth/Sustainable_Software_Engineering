@@ -111,10 +111,12 @@ const extractHostname = (url) => {
         //get and set the localintensity
         const localIP = await getLocalIp();
         setLocalIp(localIP);
+        chrome.storage.local.set({ localIntensity: JSON.stringify(localIP) });
         // set interval to fetch once an hour.
         setInterval(async() => {
           const ip = await getLocalIp();
           setLocalIp(ip);
+          chrome.storage.local.set({ localIntensity: JSON.stringify(ip) });
         }, 1000*60*60);
   };
 
