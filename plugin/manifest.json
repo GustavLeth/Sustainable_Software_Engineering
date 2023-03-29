@@ -17,15 +17,15 @@
     "action": {
       "default_popup": "index.html",
       "default_icon": {
-        "16": "icon/icon_16.png",
-        "32": "icon/icon_32.png",
-        "64": "icon/icon_64.png",
-        "128": "icon/icon_128.png"}
+        "16": "16.png",
+        "32": "32.png",
+        "64": "64.png",
+        "128": "128.png"}
     },
     "icons": {
-      "16": "icon/icon_16.png",
-      "32": "icon/icon_32.png",
-      "64": "icon/icon_64.png",
-      "128": "icon/icon_128.png"}
+      "16": "16.png",
+      "32": "32.png",
+      "64": "64.png",
+      "128": "128.png"}
 
   }
