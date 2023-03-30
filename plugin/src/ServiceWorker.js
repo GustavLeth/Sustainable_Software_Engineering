@@ -1,6 +1,5 @@
 let requestMap = new Map();
 const backendUrl = "http://142.93.161.61:3000";
-const getLocalIPUrl = "http://api.ipaddress.com/myip?format=json";
 let latestOrigin = "";
 const extractHostname = (url) => {
     let hostname = url.indexOf("//") > -1 ? url.split('/')[2] : url.split('/')[0];
@@ -60,13 +59,6 @@ const extractHostname = (url) => {
         }
         return res.json();
     });
-      return response;
-    };
-    // calls an external service to get the ip.
-    const getLocalIp = async() => {
-      const response = fetch(getLocalIPUrl)
-      .then(res => res.json())
-      .then(data => { return data.ipaddress });
       return response;
     };
 
