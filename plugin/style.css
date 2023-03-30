@@ -27,3 +27,7 @@ button {
   font-size: 12px;
   cursor: pointer;
 }
+
+img {
+  width: 450px;
+}
