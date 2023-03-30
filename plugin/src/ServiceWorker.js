@@ -1,8 +1,7 @@
-let localIntensity;
 let requestMap = new Map();
 const backendUrl = "http://localhost:3000";
 const getLocalIPUrl = "http://api.ipaddress.com/myip?format=json";
-
+let latestOrigin = "";
 const extractHostname = (url) => {
     let hostname = url.indexOf("//") > -1 ? url.split('/')[2] : url.split('/')[0];
     // find & remove port number
@@ -14,12 +13,14 @@ const extractHostname = (url) => {
 
   const writeToStorage = () => {
       chrome.storage.local.set({ storageKey: JSON.stringify([...requestMap]) });
-  };
+      chrome.storage.local.set({ latestOrigin: latestOrigin});
+    };
   
   const onHeadersReceivedListener = (requestDetails) => {
     const {initiator, url, responseHeaders} = requestDetails;
     const origin = extractHostname(initiator ?? url);
     const responseHeadersContentLength = responseHeaders.find(header => header.name.toLowerCase() === "content-length");
+    latestOrigin = origin;
     const contentLength = responseHeadersContentLength ?? {value: 0};
     if (contentLength.value > 0) {
       const request = requestMap.get(origin) ?? {}
@@ -46,11 +47,6 @@ const extractHostname = (url) => {
             const intensity = !isNaN(intensityResponse) ? intensityResponse : 1;
             //refetch and spread on the request, just in case anything changed in between.
             requestMap.set(origin, {...requestMap.get(origin), intensity: intensity, intensityTime: Date.now()});
-            // just to be safe if the local ip couldn't be found. It shouldn't be a problem now since we ping an external service.
-            // In the future we will pull it from the backend.
-            if(!localIntensity) {
-              localIntensity = intensity;
-            }
           } catch (error) {
             console.log(error);
           }
@@ -80,15 +76,7 @@ const extractHostname = (url) => {
         chrome.storage.local.set({ storageKey: JSON.stringify([...requestMap])});
       }
     }
-
-    const setLocalIp = async(ip) => {
-      const intesityResponse = await getCarbonIntensity(ip);
-      const intensity = !isNaN(intesityResponse) ? intesityResponse : 1;
-      localIntensity = intensity;
-      const intensityObj = {intensity: localIntensity, time: Date.now()};
-      chrome.storage.local.set({ localIntensity: JSON.stringify(intensityObj) });
-    }
-
+  
     const start = async() => {
       chrome.webRequest.onHeadersReceived.addListener(
         onHeadersReceivedListener,
@@ -108,16 +96,6 @@ const extractHostname = (url) => {
           requestMap = new Map(JSON.parse(result.storageKey));
         }
       });
-        //get and set the localintensity
-        const localIP = await getLocalIp();
-        setLocalIp(localIP);
-        chrome.storage.local.set({ localIntensity: JSON.stringify(localIP) });
-        // set interval to fetch once an hour.
-        setInterval(async() => {
-          const ip = await getLocalIp();
-          setLocalIp(ip);
-          chrome.storage.local.set({ localIntensity: JSON.stringify(ip) });
-        }, 1000*60*60);
   };
 
 start();
