@@ -1,5 +1,5 @@
 let requestMap = new Map();
-const backendUrl = "http://localhost:3000";
+const backendUrl = "http://142.93.161.61:3000";
 const getLocalIPUrl = "http://api.ipaddress.com/myip?format=json";
 let latestOrigin = "";
 const extractHostname = (url) => {
