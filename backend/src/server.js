@@ -28,7 +28,7 @@ app.use(cors(corsOpts));
 
 function getCarbonData(countryCode) {
   const cutoffTime = moment().subtract(47, 'hours'); // 47 hours ago from current time, should be safe since the forecast is for 48 hours.
-  const files = fs.readdirSync('./carbon_data');
+  const files = fs.readdirSync('../carbon_data');
 
   // Filter files by country code and updated time
   const recentFiles = files.filter(file => {
@@ -50,7 +50,7 @@ function getCarbonData(countryCode) {
   // return contents.
   if (recentFiles.length > 0) {
     const latestFile = recentFiles[0];
-    const filePath = `./carbon_data/${latestFile}`;
+    const filePath = `../carbon_data/${latestFile}`;
     const carbonData = fs.readFileSync(filePath, 'utf8');
     return Promise.resolve(JSON.parse(carbonData));
   } else {
@@ -65,7 +65,7 @@ function saveCarbonData(data) {
   console.log('saveCarbonData data', data);
   const updatedAt = moment(data.forecast[0].datetime).format(DT_FMT);
   const zone = data.zone;
-  const filename = `./carbon_data/${updatedAt}_${zone}.txt`;
+  const filename = `../carbon_data/${updatedAt}_${zone}.txt`;
 
   fs.writeFile(filename, JSON.stringify(data), (err) => {
     if (err) {
@@ -116,7 +116,7 @@ async function fetchCountryCodeFromIp(ip) {
 }
 
 async function getCountryCodeFromIp(ip) {
-  const filePath = "./ip_data/ip_country_code.csv";
+  const filePath = "../ip_data/ip_country_code.csv";
   const fileData = await readFileAsync(filePath, "utf8");
   const lines = fileData.split("\n");
   for (let i = 0; i < lines.length; i++) {
