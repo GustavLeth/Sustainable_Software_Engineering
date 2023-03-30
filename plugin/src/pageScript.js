@@ -5,9 +5,29 @@ const resetButton = document.getElementById("reset_button");
 const transferConstant = 0.81/1024**3; // [kWh/byte] Use same conversion factor as websitecarbon.com.
 
 const resetOnClick = () => {
-  console.log("reset");
   chrome.runtime.sendMessage({ action: 'reset' });
 };
+
+const getColorCode = (number) => {
+    if (number <= 100)
+      return "#99f182";
+    if (number <= 200)
+      return "#ccf853";
+    if (number <= 300)
+      return "#f8fe40";
+    if (number <= 400)
+      return "#ffea3b";
+    if (number <= 500)
+      return "#ffd436";
+    if (number <= 600)
+      return "#ffb02f";
+    if (number <= 700)
+      return "#ff9d2a";
+    if (number <= 800)
+      return "#ff5e23";
+    
+    return "#ff0e1e";
+  }
 
 const readFromStorage = async() => {
   let requestMap;
@@ -27,6 +47,8 @@ const readFromStorage = async() => {
     const intensityOfOrigin = requestMap.get(latestOrigin)?.intensity ?? 0;
     if(latestOrigin && intensityOfOrigin) {
       latestOriginIntensity.textContent = latestOrigin + " is " + intensityOfOrigin;
+      const intensityColor = getColorCode(intensityOfOrigin);
+      latestOriginIntensity.style.color = intensityColor;
     }
   });
   };

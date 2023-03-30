@@ -143,10 +143,11 @@ app.get('/co2/:ip', (req, res) => {
     .then(intensity => {
       console.log('intensity', intensity);
       if(intensity) {
-      res.send(intensity.toString());
-    } else {
-      res.status(404);
-      res.send();
+        console.log("sent intensity", intensity)
+        res.send(intensity.toString());
+      } else {
+        res.status(404);
+        res.send();
     }
     })
     .catch(error => {
