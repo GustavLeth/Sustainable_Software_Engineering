@@ -33,7 +33,7 @@ const extractHostname = (url) => {
     const {ip, initiator, url, statusCode} = response;
     //TODO this might need some more things, but I think it doesn't loop requests from the backend anymore.
     // But if it does, this is the place.
-    if(ip == "::1" || statusCode > 299) {
+    if(ip == "::1" || ip == "142.93.161.61" || statusCode > 299) {
       return;
     }
     const origin = extractHostname(initiator ?? url);
